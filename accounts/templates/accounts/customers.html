@@ -8,7 +8,7 @@
         <div class="card card-body">
             <h5>Customer:</h5>
             <hr>
-            <a class="btn btn-outline-info  btn-sm btn-block" href="">Update Customer</a>
+            <a class="btn btn-outline-info  btn-sm btn-block" href="{% url 'update-customer' pk=customer.id %}">Update Customer</a>
             <a class="btn btn-outline-info  btn-sm btn-block" href="{% url 'create-order' pk=customer.id %}">Place Order</a>
 
         </div>
@@ -33,7 +33,7 @@
 </div>
 
 
-<br>
+<!-- <br>
 <div class="row">
     <div class="col">
         <div class="card card-body">
@@ -44,12 +44,17 @@
         </div>
     </div>
 
-</div>
+</div> -->
 <br>
 
 <div class="row">
     <div class="col-md">
         <div class="card card-body">
+            <form method="get">
+                {{ my_Filter.form}}
+                <button class="btn btn-primary" type="submit">Search</button>
+            </form>
+            <br>
             <table class="table table-sm">
                 <tr>
                     <th>Product</th>
@@ -65,13 +70,57 @@
                         <td>{{order.product.category}}</td>
                         <td>{{order.date_created}}</td>
                         <td>{{order.status}}</td>
-                        <td><a class="btn btn-sm btn-info" href="">Update</a></td>
-                        <td><a class="btn btn-sm btn-danger" href="">Remove</a></td>
+                        <td><a class="btn btn-sm btn-info" href="{% url 'update-order' pk=order.id %}">Update</a></td>
+                        <td><a class="btn btn-sm btn-danger" href="{% url 'delete-order' pk=order.id %}">Remove</a></td>
                     </tr>
                 {% endfor %}
             </table>
         </div>
     </div>
+    <div class="col-md">
+        <div class="card card-body">
+            <h5>Order to Dates:</h5>
+            <hr>
+            <canvas id="line-chart"></canvas>
+        </div>
+    </div>
 </div>
+
+<script src="https://code.jquery.com/jquery-3.4.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@2.9.3/dist/Chart.min.js"></script>
+<script type="text/javascript">
+
+    var backgroundColorList = []
+    function generateRandomColor(len)
+    {
+        console.log(len)
+        for(let i=0;i<len;i++){
+            var randomColor = '#'+Math.floor(Math.random()*16777215).toString(16);
+            backgroundColorList[i] = randomColor
+        }
+        console.log(backgroundColorList)
+        return backgroundColorList;
+        //random color will be freshly served
+    }
+
+    $.get('{% url "getcustomerchart" pk=customer.pk %}', function (data) {
+        var occtx = $("#line-chart").get(0).getContext("2d");
+        var occonfig = {
+            type: 'line',
+            data: {
+                datasets: [{
+                    data: data.order_customer.data,
+            backgroundColor: '#'+Math.floor(Math.random()*16777215).toString(16),//generateRandomColor(data.customer.data.length),
+            label: 'Orders'
+    }],
+        labels: data.order_customer.labels
+      },
+        options: {
+        responsive: true
+    }
+    };
+    new Chart(occtx, occonfig);
+    });
+</script>
 
 {% endblock %}

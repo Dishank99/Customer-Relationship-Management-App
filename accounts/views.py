@@ -10,6 +10,7 @@ from .models import *
 from .forms import *
 from .filters import *
 from .decorators import *
+from .categorizing_customer import *
 
 from django.http import JsonResponse
 
@@ -24,11 +25,6 @@ def registerPage(request):
             user = form.save()
             username = form.cleaned_data.get('username')
             email = form.cleaned_data.get('email')
-
-            group = Group.objects.get(name='customer')
-            user.groups.add(group)
-
-            Customer.objects.create(user=user,email = email)
 
             messages.success(request,f'User {username} created successfully')
             return redirect('login')        
@@ -105,7 +101,7 @@ def accountSettings(request):
         if form.is_valid():
             form.save()
             return redirect('user')
-
+    print(type(form))
     context = {'form':form}
     return render(request, 'accounts/account_settings.html', context)
 
@@ -265,3 +261,89 @@ def getcharts(request):
         
     return JsonResponse(data)
 
+def getcustomerchart(request, pk):
+    customer = Customer.objects.get(pk=pk)    
+
+    orders = customer.order_set.all()
+    # my_Filter = OrderChartFilter(request.GET, queryset=orders)
+    # orders_filtered = my_Filter.qs
+    oclabels = sorted(list(set([str(oc.date_created).split(' ')[0] for oc in orders])))
+    #ocdata = [i for i in range(orders_filtered.count())]
+    ocdata=[]
+    for ocdate in oclabels:
+        #date = str(oc.date_created).split(' ')[0]
+        print(ocdate)
+        count=0
+        for j in range(len(orders)):
+            if str(orders[j].date_created).split(' ')[0] == ocdate:
+                count += 1
+        print(count)
+        ocdata.append(count)
+
+    print(oclabels)
+
+    data = {
+        'order_customer' : {
+                                'labels':oclabels,
+                                'data':ocdata,
+                            },
+            }
+        
+    return JsonResponse(data)
+
+@allowed_users(allowed_roles=['admin'])
+def AddCustomer(request):
+    form = RegisterForm()
+
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            form.save()
+            return redirect('home')
+
+    return render(request,'accounts/customeradmin.html', {'form':form})
+
+@allowed_users(allowed_roles=['admin'])
+def UpdateCustomer(request, pk):
+    customer = Customer.objects.get(pk=pk)
+    form = UpdateCustomerForm(instance=customer)
+
+    if request.method == 'POST':
+        form = UpdateCustomerForm(request.POST, instance=customer)
+        if form.is_valid():
+            form.save()
+            return redirect('home')
+
+    return render(request,'accounts/account_settings.html', {'form':form})
+
+def Priotizing(request):
+    product_order_count = {}
+    customer_order_count = {}
+
+    for order in Order.objects.all():
+        if order.customer is not None and order.product is not None:
+            if order.customer.name in customer_order_count:
+                customer_order_count[order.customer.name]['count'] += 1
+            else:
+                customer_order_count[order.customer.name] = {
+                                                            'type':int(order.customer.category) if order.customer.category else 1,
+                                                            'count':0
+                                                            }
+            if order.product.name in product_order_count:
+                product_order_count[order.product.name] += 1
+            else:
+                product_order_count[order.product.name] = 0
+        # print(customer_order_count)
+    print(customer_order_count.items())
+    customer_order_count = dict(sorted(customer_order_count.items(), key = lambda kv:(kv[1]['type'], kv[1]['count']), reverse=True))
+    product_order_count = dict(sorted(product_order_count.items(), key = lambda kv:(kv[1], kv[0]), reverse=True))
+
+    misc = {
+            'Customer_to_Order':customer_order_count, 
+            'Product_to_Order':product_order_count
+            }
+
+    return JsonResponse(customer_order_count,safe=False)
+
+def Categorizing(request):
+    return JsonResponse(categorize_all(),safe=False)

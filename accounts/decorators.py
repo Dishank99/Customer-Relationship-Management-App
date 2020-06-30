@@ -39,3 +39,4 @@ def admin_only(func):
             return func(request, *args, **kwargs)
 
     return wrapper_func
+

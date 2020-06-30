@@ -19,7 +19,12 @@
                     <tr>
                         <td><a href="{% url 'products-update' pk=product.id %}">{{ product.name }}</a></td>
                         <td>{{ product.category }}</td>
-                        <td>{{ product.price }}</td>
+                        {% if product.offer %}
+                            <td> <span style='text-decoration:line-through;'>{{ product.price }} </span><span> | {{ product.offer }}</span></td>
+                            <!-- <td>{{ product.offer }}</td> -->
+                        {% else %}
+                            <td>{{ product.price }}</td>
+                        {% endif %}
                     </tr>            
                 {% endfor %}
             </table>
